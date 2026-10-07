@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+* {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: background-color 0.5s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Glassmorphism Core */
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Dynamic Theme Backgrounds --- */
+
+/* 1. Aurora Neon */
+body.theme-aurora {
+  background: radial-gradient(circle at 15% 20%, #064e3b 0%, #022c22 40%, #020617 100%);
+}
+body.theme-aurora .accent-text { color: #34d399; }
+body.theme-aurora .accent-bg { background-color: #059669; }
+
+/* 2. Cyber Sunset */
+body.theme-sunset {
+  background: radial-gradient(circle at 80% 20%, #701a75 0%, #311042 45%, #090314 100%);
+}
+body.theme-sunset .accent-text { color: #f472b6; }
+body.theme-sunset .accent-bg { background-color: #db2777; }
+
+/* 3. Deep Ocean */
+body.theme-ocean {
+  background: radial-gradient(circle at 50% 10%, #0e7490 0%, #083344 50%, #020617 100%);
+}
+body.theme-ocean .accent-text { color: #38bdf8; }
+body.theme-ocean .accent-bg { background-color: #0284c7; }
+
+/* 4. Sunny Glow */
+body.theme-sunny {
+  background: radial-gradient(circle at 20% 20%, #0284c7 0%, #0369a1 40%, #091e3a 100%);
+}
+body.theme-sunny .accent-text { color: #fbbf24; }
+body.theme-sunny .accent-bg { background-color: #0ea5e9; }
+
+/* 5. Midnight OLED */
+body.theme-midnight {
+  background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 60%, #000000 100%);
+}
+body.theme-midnight .accent-text { color: #a78bfa; }
+body.theme-midnight .accent-bg { background-color: #7c3aed; }

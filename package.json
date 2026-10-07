@@ -1,0 +1,16 @@
+{
+  "name": "weather-ai-app",
+  "version": "1.0.0",
+  "description": "Full-stack Weather App with AI Insights",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3"
+  }
+}
