@@ -12,14 +12,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 app.use(express.json());
+
+// Static files serve karne ke liye
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-// 1. Root route to serve HTML
+// Main page route
 app.get('/', (req, res) => {
   const publicPath = path.join(__dirname, 'public', 'index.html');
   const rootPath = path.join(__dirname, 'index.html');
@@ -29,21 +31,10 @@ app.get('/', (req, res) => {
   } else if (fs.existsSync(rootPath)) {
     return res.sendFile(rootPath);
   }
-  res.status(404).send('index.html nahi mili!');
+  res.status(404).send('index.html nahi mili. Check karein file public folder me hai.');
 });
 
-// Geocoding Helper
-async function getCoordinates(city) {
-  const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
-  const res = await fetch(geoUrl);
-  const data = await res.json();
-  if (!data.results || data.results.length === 0) {
-    throw new Error('City not found');
-  }
-  return data.results[0];
-}
-
-// 2. Weather Route
+// Weather API Route
 app.get('/api/weather', async (req, res) => {
   try {
     const { city, lat, lon } = req.query;
@@ -52,16 +43,21 @@ app.get('/api/weather', async (req, res) => {
     let locationName = city || 'Current Location';
 
     if (city) {
-      const geo = await getCoordinates(city);
-      targetLat = geo.latitude;
-      targetLon = geo.longitude;
-      locationName = `${geo.name}, ${geo.country || ''}`;
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+      const geoRes = await fetch(geoUrl);
+      const geoData = await geoRes.json();
+      if (!geoData.results || geoData.results.length === 0) {
+        return res.status(404).json({ error: 'City not found' });
+      }
+      targetLat = geoData.results[0].latitude;
+      targetLon = geoData.results[0].longitude;
+      locationName = `${geoData.results[0].name}, ${geoData.results[0].country || ''}`;
     }
 
     if (!targetLat || !targetLon) {
-      targetLat = 28.6139;
-      targetLon = 77.2090;
-      locationName = 'New Delhi, India';
+      targetLat = 26.1542;
+      targetLon = 85.8918;
+      locationName = 'Darbhanga, India';
     }
 
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max&timezone=auto`;
@@ -79,41 +75,43 @@ app.get('/api/weather', async (req, res) => {
     });
   } catch (error) {
     console.error('Weather error:', error.message);
-    res.status(500).json({ error: error.message || 'Weather fetch fail hua' });
+    res.status(500).json({ error: 'Weather fetch failed' });
   }
 });
 
-// 3. AI Insights Route
+// Gemini AI Route
 app.post('/api/ai-insights', async (req, res) => {
   const { city, temperature, condition, humidity, windSpeed, userQuery } = req.body;
 
   const defaultInsight = () => {
-    let cloth = temperature < 18 ? 'Thandi hawayein hain, jacket pehniye.' : (temperature > 32 ? 'Garmi zyada hai, light cotton kapde aur paani peete rahein.' : 'Mausam comfortable aur suhana hai.');
+    let cloth = temperature < 18 ? 'Thand hai, jacket pehniye.' : (temperature > 30 ? 'Garmi hai, light cotton kapde behtar rahenge.' : 'Mausam suhana hai.');
     let act = condition && condition.toLowerCase().includes('rain') ? 'Barish ho sakti hai, umbrella sath rakhein.' : 'Outdoor ghumne ke liye badhiya waqt hai.';
-    return `Mausam Report (${city}): Abhi temperature ${temperature}°C hai aur mausam "${condition}" hai. ${cloth} ${act}`;
+    return `Mausam Report (${city}): Temp ${Math.round(temperature)}°C, Condition "${condition}". ${cloth} ${act}`;
   };
 
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.json({ result: defaultInsight() });
-    }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.json({ result: defaultInsight() });
+  }
 
+  try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    let prompt = userQuery 
-      ? `Aap ek friendly weather AI hain. Context: Location: ${city}, Temp: ${temperature}°C, Mausam: ${condition}, Humidity: ${humidity}%, Wind: ${windSpeed} km/h. User sawal: "${userQuery}". Chhota aur clear jawab dein Hinglish me.`
-      : `Aap ek friendly weather AI hain. Context: Location: ${city}, Temp: ${temperature}°C, Mausam: ${condition}, Wind: ${windSpeed} km/h. 2-3 lines me advice dein: kya kapde pehne aur outdoor jaana theek hai ya nahi. Hinglish me likhein.`;
+    let prompt = userQuery
+      ? `Aap ek smart weather assistant hain. Location: ${city}, Temp: ${temperature}°C, Weather: ${condition}, Humidity: ${humidity}%, Wind: ${windSpeed} km/h. Sawal: "${userQuery}". Hinglish me 2-3 lines me clear jawab dein.`
+      : `Aap ek smart weather assistant hain. Location: ${city}, Temp: ${temperature}°C, Weather: ${condition}, Humidity: ${humidity}%, Wind: ${windSpeed} km/h. 2-3 lines me Hinglish lifestyle advice dein (kapde, travel, precautions).`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     res.json({ result: response.text() });
   } catch (error) {
+    console.error('AI error:', error.message);
     res.json({ result: defaultInsight() });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Weather AI Server is running at http://localhost:${PORT}`);
+// Production binding for Render (0.0.0.0 is mandatory)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Weather AI Server is running on port ${PORT}`);
 });
